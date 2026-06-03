@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Test Client</title>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; }
+        #chat-container { margin-top: 20px; }
+        input { padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background-color: #0056b3; }
+        
+        /* Styles for the new messages section */
+        #messages-box { 
+            margin-top: 30px; 
+            padding: 15px; 
+            background: white; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 6px;
+            max-width: 400px;
+        }
+        #messagesList { 
+            list-style-type: none; 
+            padding: 0; 
+            max-height: 200px; 
+            overflow-y: auto; 
+        }
+        #messagesList li { 
+            padding: 8px 12px; 
+            margin-bottom: 8px; 
+            background-color: #e9ecef; 
+            border-radius: 4px; 
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <h2>Backend Socket Test</h2>
+    <div id="status">Status: 🔴 Disconnected</div>
+
+    <div id="chat-container">
+        <input type="text" id="messageInput" placeholder="Type a message to the server...">
+        <button id="sendBtn">Send Message</button>
+    </div>
+
+    <div id="messages-box">
+        <h3>Messages from Server:</h3>
+        <ul id="messagesList"></ul>
+    </div>
+
+    <script>
+        const socket = io("http://localhost:3000"); 
+
+        const statusDiv = document.getElementById("status");
+        const sendBtn = document.getElementById("sendBtn");
+        const messageInput = document.getElementById("messageInput");
+        const messagesList = document.getElementById("messagesList"); // Grab the list element
+
+        // Listen for connection success
+        socket.on("connect", () => {
+            statusDiv.innerText = `Status: 🟢 Connected (ID: ${socket.id})`;
+            console.log("Connected to server:", socket.id);
+        });
+
+        socket.on("disconnect", () => {
+            statusDiv.innerText = `Status: 🔴 Disconnected`;
+        });
+
+        // ----------------------------------------------------
+        // NEW: Listen for messages coming FROM the server
+        // ----------------------------------------------------
+        // Note: Change "message" to match the exact event name your backend emits 
+        // (e.g., if your backend uses io.emit("event:message", data))
+        socket.on("message", (data) => {
+            console.log("Received from server:", data);
+            
+            // Create a new list item element
+            const li = document.createElement("li");
+            
+            // Extract text whether server sends a direct string or an object like { message: "hello" }
+            const messageText = data && data.message ? data.message : JSON.stringify(data);
+            
+            li.innerText = messageText;
+            
+            // Append it to our messages list
+            messagesList.appendChild(li);
+            
+            // Auto-scroll to the bottom of the message box
+            messagesList.scrollTop = messagesList.scrollHeight;
+        });
+
+        // Handle sending the message
+        sendBtn.addEventListener("click", () => {
+            const text = messageInput.value.trim();
+            
+            if (text) {
+                socket.emit("event:message", { message: text });
+                console.log(`Sent to server: ${text}`);
+                messageInput.value = ""; 
+            }
+        });
+
+        messageInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                sendBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
