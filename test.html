@@ -3,44 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Socket.IO Test Client</title>
+    <title>Secure Socket.IO Test Client</title>
     <script src="http://localhost:3000/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; }
-        #chat-container { margin-top: 20px; }
-        input { padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* New styles for Auth Section */
+        #auth-container { margin-bottom: 20px; padding: 15px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 6px; display: inline-block; }
+        #tokenInput { width: 300px; }
+        
+        #chat-container { margin-top: 20px; opacity: 0.5; pointer-events: none; transition: opacity 0.3s; }
+        #chat-container.active { opacity: 1; pointer-events: auto; }
+        
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
         button:hover { background-color: #0056b3; }
         
-        /* Styles for the new messages section */
-        #messages-box { 
-            margin-top: 30px; 
-            padding: 15px; 
-            background: white; 
-            border: 1px solid #e0e0e0; 
-            border-radius: 6px;
-            max-width: 400px;
-        }
-        #messagesList { 
-            list-style-type: none; 
-            padding: 0; 
-            max-height: 200px; 
-            overflow-y: auto; 
-        }
-        #messagesList li { 
-            padding: 8px 12px; 
-            margin-bottom: 8px; 
-            background-color: #e9ecef; 
-            border-radius: 4px; 
-            word-break: break-all;
-        }
+        #messages-box { margin-top: 30px; padding: 15px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; max-width: 400px; }
+        #messagesList { list-style-type: none; padding: 0; max-height: 200px; overflow-y: auto; }
+        #messagesList li { padding: 8px 12px; margin-bottom: 8px; background-color: #e9ecef; border-radius: 4px; word-break: break-all; }
+        
+        .error-text { color: red; font-weight: bold; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
-    <h2>Backend Socket Test</h2>
+    <h2>Secure Backend Socket Test</h2>
+    
+    <div id="auth-container">
+        <h3>1. Authenticate</h3>
+        <input type="text" id="tokenInput" placeholder="Paste your JWT Access Token here...">
+        <button id="connectBtn">Connect</button>
+        <div id="authError" class="error-text"></div>
+    </div>
+
     <div id="status">Status: 🔴 Disconnected</div>
 
     <div id="chat-container">
+        <h3>2. Send Messages</h3>
         <input type="text" id="messageInput" placeholder="Type a message to the server...">
         <button id="sendBtn">Send Message</button>
     </div>
@@ -51,48 +50,97 @@
     </div>
 
     <script>
-        const socket = io("http://localhost:3000"); 
-
+        let socket; // Declare socket globally so we can access it across functions
+        
+        const tokenInput = document.getElementById("tokenInput");
+        const connectBtn = document.getElementById("connectBtn");
+        const authError = document.getElementById("authError");
+        
         const statusDiv = document.getElementById("status");
+        const chatContainer = document.getElementById("chat-container");
         const sendBtn = document.getElementById("sendBtn");
         const messageInput = document.getElementById("messageInput");
-        const messagesList = document.getElementById("messagesList"); // Grab the list element
+        const messagesList = document.getElementById("messagesList");
 
-        // Listen for connection success
-        socket.on("connect", () => {
-            statusDiv.innerText = `Status: 🟢 Connected (ID: ${socket.id})`;
-            console.log("Connected to server:", socket.id);
-        });
+        // ----------------------------------------------------
+        // NEW: Connection Logic tied to the button click
+        // ----------------------------------------------------
+        connectBtn.addEventListener("click", () => {
+            const token = tokenInput.value.trim();
+            
+            if (!token) {
+                authError.innerText = "Please enter a token first!";
+                authError.style.display = "block";
+                return;
+            }
 
-        socket.on("disconnect", () => {
-            statusDiv.innerText = `Status: 🔴 Disconnected`;
+            // Hide previous errors
+            authError.style.display = "none";
+            statusDiv.innerText = "Status: 🟡 Connecting...";
+
+            // If a socket already exists (user clicked connect twice), disconnect it first
+            if (socket) {
+                socket.disconnect();
+            }
+
+            // Initialize the connection AND PASS THE TOKEN
+            socket = io("http://localhost:3000", {
+                auth: {
+                    token: token // This is what socket.handshake.auth.token reads in the backend
+                }
+            });
+
+            setupSocketListeners();
         });
 
         // ----------------------------------------------------
-        // NEW: Listen for messages coming FROM the server
+        // Setup Socket Listeners
         // ----------------------------------------------------
-        // Note: Change "message" to match the exact event name your backend emits 
-        // (e.g., if your backend uses io.emit("event:message", data))
-        socket.on("message", (data) => {
-            console.log("Received from server:", data);
-            
-            // Create a new list item element
-            const li = document.createElement("li");
-            
-            // Extract text whether server sends a direct string or an object like { message: "hello" }
-            const messageText = data && data.message ? data.message : JSON.stringify(data);
-            
-            li.innerText = messageText;
-            
-            // Append it to our messages list
-            messagesList.appendChild(li);
-            
-            // Auto-scroll to the bottom of the message box
-            messagesList.scrollTop = messagesList.scrollHeight;
-        });
+        function setupSocketListeners() {
+            // Listen for connection success
+            socket.on("connect", () => {
+                statusDiv.innerText = `Status: 🟢 Connected securely (ID: ${socket.id})`;
+                console.log("Connected securely to server:", socket.id);
+                
+                // Enable the chat UI
+                chatContainer.classList.add("active");
+            });
 
-        // Handle sending the message
+            // NEW: Listen for Authentication Errors from your backend middleware
+            socket.on("connect_error", (err) => {
+                statusDiv.innerText = `Status: 🔴 Connection Rejected`;
+                authError.innerText = `Auth Error: ${err.message}`;
+                authError.style.display = "block";
+                console.error("Connection rejected by server:", err.message);
+                
+                // Disable chat UI
+                chatContainer.classList.remove("active");
+            });
+
+            socket.on("disconnect", () => {
+                statusDiv.innerText = `Status: 🔴 Disconnected`;
+                chatContainer.classList.remove("active");
+            });
+
+            // Listen for messages coming FROM the server
+            socket.on("message", (data) => {
+                console.log("Received from server:", data);
+                const li = document.createElement("li");
+                const messageText = data && data.message ? data.message : JSON.stringify(data);
+                
+                li.innerText = messageText;
+                messagesList.appendChild(li);
+                messagesList.scrollTop = messagesList.scrollHeight;
+            });
+        }
+
+        // ----------------------------------------------------
+        // Message Sending Logic
+        // ----------------------------------------------------
         sendBtn.addEventListener("click", () => {
+            // Ensure socket exists and is connected before sending
+            if (!socket || !socket.connected) return;
+
             const text = messageInput.value.trim();
             
             if (text) {

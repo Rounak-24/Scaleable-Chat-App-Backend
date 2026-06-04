@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { publishMessage, sendMessages, subscribeMessage } from "../services/message.services.js"
+import { setupSocketAuth } from "../services/auth.services.js"
 
 export class SocketService{
     private _io:Server
@@ -8,6 +9,7 @@ export class SocketService{
         console.log(`Init Socket Server......`)
         this._io = new Server()
 
+        setupSocketAuth(this._io)
         subscribeMessage()
     }
 

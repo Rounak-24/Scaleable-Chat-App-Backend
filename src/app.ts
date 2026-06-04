@@ -1,6 +1,7 @@
 import express from "express"
 import cors from "cors"
 import type { Express, Request, Response } from "express"
+import { authRouter } from "./routes/auth.routes.js"
 
 export const app:Express = express()
 
@@ -17,3 +18,5 @@ const logRequest = (req: Request, res: Response, next:Function)=>{
 app.use(logRequest)
 app.use(express.json())
 app.use(cors(corsOptions))
+
+app.use("/api/v1/auth",authRouter)
