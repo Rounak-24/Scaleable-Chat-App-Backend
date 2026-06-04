@@ -21,9 +21,9 @@ export const jwtAuthMiddleware = async (req:Request, res:Response, next:NextFunc
             where: {id: decoded.id},
             select:{
                 id:true,
-                name:true,
+                fullname:true,
                 email:true,
-                emailVerified:true
+                emailVeriified:true
             }
         })
 

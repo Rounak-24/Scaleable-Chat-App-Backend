@@ -90,7 +90,7 @@ export const loginUser = asyncHandler(async (req:Request, res:Response)=>{
     }
 
     if(!comparePassword(password, findUser.password)){
-        throw new ApiResponse(401,null,`Incorrect password`)
+        throw new ApiError(401,`Incorrect password`)
     }
 
     const tokenObj = generateTokens(

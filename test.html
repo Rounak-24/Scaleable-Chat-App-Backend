@@ -3,27 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Socket.IO Test Client</title>
+    <title>Secure Socket.IO Chat App</title>
     <script src="http://localhost:3000/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; }
+        body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; margin: 0; }
         
-        /* New styles for Auth Section */
+        /* Auth Section */
         #auth-container { margin-bottom: 20px; padding: 15px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 6px; display: inline-block; }
-        #tokenInput { width: 300px; }
-        
-        #chat-container { margin-top: 20px; opacity: 0.5; pointer-events: none; transition: opacity 0.3s; }
-        #chat-container.active { opacity: 1; pointer-events: auto; }
-        
-        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
-        button:hover { background-color: #0056b3; }
-        
-        #messages-box { margin-top: 30px; padding: 15px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; max-width: 400px; }
-        #messagesList { list-style-type: none; padding: 0; max-height: 200px; overflow-y: auto; }
-        #messagesList li { padding: 8px 12px; margin-bottom: 8px; background-color: #e9ecef; border-radius: 4px; word-break: break-all; }
-        
+        #tokenInput { width: 300px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
         .error-text { color: red; font-weight: bold; margin-top: 10px; display: none; }
+        button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; transition: background 0.2s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+        /* Main App Layout (Hidden until connected) */
+        #app-layout { 
+            display: none; 
+            gap: 20px; 
+            margin-top: 20px; 
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            height: 500px;
+        }
+        #app-layout.active { display: flex; }
+
+        /* Sidebar (Left) */
+        .sidebar { width: 300px; border-right: 1px solid #e0e0e0; padding: 15px; display: flex; flex-direction: column; }
+        .sidebar h3 { margin-top: 0; font-size: 16px; margin-bottom: 10px; }
+        
+        /* Search Area */
+        .search-group { display: flex; gap: 5px; margin-bottom: 10px; }
+        #searchEmail { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        #searchBtn { padding: 8px 12px; }
+        
+        #searchResults { margin-bottom: 20px; min-height: 40px; }
+        .search-result-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #e9ecef; border-radius: 4px; font-size: 14px; }
+        .search-result-item button { padding: 5px 10px; font-size: 12px; background-color: #28a745; }
+        .search-result-item button:hover { background-color: #218838; }
+
+        /* Conversations List */
+        #conversationsList { list-style-type: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
+        .conv-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; border-radius: 4px; }
+        .conv-item:hover { background-color: #f1f8ff; }
+        .conv-item.active { background-color: #e3f2fd; font-weight: bold; border-left: 4px solid #007bff; }
+
+        /* Chat Area (Right) */
+        .chat-area { flex-grow: 1; display: flex; flex-direction: column; padding: 15px; }
+        #currentChatHeader { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #555; }
+        
+        #messagesList { list-style-type: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .msg-item { padding: 8px 12px; background-color: #e9ecef; border-radius: 12px; width: fit-content; max-width: 80%; word-break: break-all; }
+        .msg-item.self { background-color: #007bff; color: white; align-self: flex-end; }
+
+        .chat-controls { display: flex; gap: 10px; }
+        #messageInput { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -34,127 +68,261 @@
         <input type="text" id="tokenInput" placeholder="Paste your JWT Access Token here...">
         <button id="connectBtn">Connect</button>
         <div id="authError" class="error-text"></div>
+        <div id="status" style="margin-top: 10px; font-weight: bold;">Status: 🔴 Disconnected</div>
     </div>
 
-    <div id="status">Status: 🔴 Disconnected</div>
+    <div id="app-layout">
+        
+        <div class="sidebar">
+            <h3>Start New Chat</h3>
+            <div class="search-group">
+                <input type="email" id="searchEmail" placeholder="User's email (e.g., bob@test.com)">
+                <button id="searchBtn">Search</button>
+            </div>
+            
+            <div id="searchResults"></div>
 
-    <div id="chat-container">
-        <h3>2. Send Messages</h3>
-        <input type="text" id="messageInput" placeholder="Type a message to the server...">
-        <button id="sendBtn">Send Message</button>
-    </div>
+            <h3>Your Conversations</h3>
+            <ul id="conversationsList"></ul>
+        </div>
 
-    <div id="messages-box">
-        <h3>Messages from Server:</h3>
-        <ul id="messagesList"></ul>
+        <div class="chat-area">
+            <h3 id="currentChatHeader">No conversation selected</h3>
+            <ul id="messagesList"></ul>
+            <div class="chat-controls">
+                <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+                <button id="sendBtn" disabled>Send</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        let socket; // Declare socket globally so we can access it across functions
-        
+        let socket; 
+        let activeConversationId = null;
+        let activeReceiverId = null; 
+        let jwtToken = ""; 
+
+        // DOM Elements
         const tokenInput = document.getElementById("tokenInput");
         const connectBtn = document.getElementById("connectBtn");
         const authError = document.getElementById("authError");
-        
         const statusDiv = document.getElementById("status");
-        const chatContainer = document.getElementById("chat-container");
-        const sendBtn = document.getElementById("sendBtn");
-        const messageInput = document.getElementById("messageInput");
+        
+        const appLayout = document.getElementById("app-layout");
+        const searchEmail = document.getElementById("searchEmail");
+        const searchBtn = document.getElementById("searchBtn");
+        const searchResults = document.getElementById("searchResults");
+        const conversationsList = document.getElementById("conversationsList");
+        
+        const currentChatHeader = document.getElementById("currentChatHeader");
         const messagesList = document.getElementById("messagesList");
+        const messageInput = document.getElementById("messageInput");
+        const sendBtn = document.getElementById("sendBtn");
 
-        // ----------------------------------------------------
-        // NEW: Connection Logic tied to the button click
-        // ----------------------------------------------------
+        // ==========================================
+        // 1. AUTH & CONNECTION
+        // ==========================================
         connectBtn.addEventListener("click", () => {
-            const token = tokenInput.value.trim();
-            
-            if (!token) {
-                authError.innerText = "Please enter a token first!";
-                authError.style.display = "block";
-                return;
-            }
+            jwtToken = tokenInput.value.trim();
+            if (!jwtToken) return showError("Please enter a token first!");
 
-            // Hide previous errors
             authError.style.display = "none";
             statusDiv.innerText = "Status: 🟡 Connecting...";
 
-            // If a socket already exists (user clicked connect twice), disconnect it first
-            if (socket) {
-                socket.disconnect();
-            }
+            if (socket) socket.disconnect();
 
-            // Initialize the connection AND PASS THE TOKEN
             socket = io("http://localhost:3000", {
-                auth: {
-                    token: token // This is what socket.handshake.auth.token reads in the backend
-                }
+                auth: { token: jwtToken }
             });
 
             setupSocketListeners();
         });
 
-        // ----------------------------------------------------
-        // Setup Socket Listeners
-        // ----------------------------------------------------
         function setupSocketListeners() {
-            // Listen for connection success
             socket.on("connect", () => {
                 statusDiv.innerText = `Status: 🟢 Connected securely (ID: ${socket.id})`;
-                console.log("Connected securely to server:", socket.id);
-                
-                // Enable the chat UI
-                chatContainer.classList.add("active");
+                appLayout.classList.add("active"); 
             });
 
-            // NEW: Listen for Authentication Errors from your backend middleware
             socket.on("connect_error", (err) => {
                 statusDiv.innerText = `Status: 🔴 Connection Rejected`;
-                authError.innerText = `Auth Error: ${err.message}`;
-                authError.style.display = "block";
-                console.error("Connection rejected by server:", err.message);
-                
-                // Disable chat UI
-                chatContainer.classList.remove("active");
+                showError(`Auth Error: ${err.message}`);
+                appLayout.classList.remove("active");
             });
 
             socket.on("disconnect", () => {
                 statusDiv.innerText = `Status: 🔴 Disconnected`;
-                chatContainer.classList.remove("active");
+                appLayout.classList.remove("active");
             });
 
-            // Listen for messages coming FROM the server
-            socket.on("message", (data) => {
-                console.log("Received from server:", data);
-                const li = document.createElement("li");
-                const messageText = data && data.message ? data.message : JSON.stringify(data);
-                
-                li.innerText = messageText;
-                messagesList.appendChild(li);
-                messagesList.scrollTop = messagesList.scrollHeight;
+            socket.on("receive:message", (data) => {
+                console.log("New message received:", data);
+                if (data.conversation_id === activeConversationId) {
+                    appendMessageToUI(data.content, "other");
+                }
             });
         }
 
-        // ----------------------------------------------------
-        // Message Sending Logic
-        // ----------------------------------------------------
+        // ==========================================
+        // 2. SEARCH FOR USER
+        // ==========================================
+        searchBtn.addEventListener("click", async () => {
+            const email = searchEmail.value.trim();
+            if (!email) return alert("Please enter an email");
+
+            try {
+                searchBtn.innerText = "...";
+                searchBtn.disabled = true;
+                searchResults.innerHTML = ""; // Clear previous results
+
+                // Make API call to FIND the user
+                // Adjust route to match your backend (GET or POST)
+                const response = await fetch(`http://localhost:3000/api/v1/user/search`, {
+                    method: "POST", // Change to GET if your search endpoint is GET
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ email: email }) 
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "User not found");
+                console.log(data)
+                // Render the user with a Start Chat button
+                // (Assumes backend returns an object like { id: "123", email: "bob@test.com" })
+                const userId = data.id || data._id || data.receiver_id; // Adapt to your DB structure
+                const userEmail = data.email || email;
+                const username = data.data.fullname
+
+                searchResults.innerHTML = `
+                    <div class="search-result-item">
+                        <span>${username}</span>
+                        <button id="initiateChatBtn">Start Chat</button>
+                    </div>
+                `;
+
+                // Attach event listener to the new button
+                document.getElementById("initiateChatBtn").addEventListener("click", () => {
+                    initiateConversation(userId, userEmail);
+                });
+
+            } catch (err) {
+                searchResults.innerHTML = `<span style="color:red; font-size:12px;">${err.message}</span>`;
+            } finally {
+                searchBtn.innerText = "Search";
+                searchBtn.disabled = false;
+            }
+        });
+
+        // ==========================================
+        // 3. START CONVERSATION (Create & Join Room)
+        // ==========================================
+        async function initiateConversation(receiverId, receiverEmail) {
+            const btn = document.getElementById("initiateChatBtn");
+            btn.innerText = "Starting...";
+            btn.disabled = true;
+
+            try {
+                // Make API call to CREATE the conversation
+                const response = await fetch("http://localhost:3000/api/v1/conversations", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({ receiverId: receiverId })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Failed to start chat");
+
+                // Add to sidebar and clear search area
+                addConversationToSidebar(data.conversation_id, receiverEmail, receiverId);
+                searchResults.innerHTML = "";
+                searchEmail.value = "";
+
+            } catch (err) {
+                alert(err.message);
+                btn.innerText = "Start Chat";
+                btn.disabled = false;
+            }
+        }
+
+        // ==========================================
+        // 4. UI: SIDEBAR & ROOM JOINING
+        // ==========================================
+        function addConversationToSidebar(convId, displayEmail, receiverId) {
+            // Prevent adding duplicate rooms in the UI if it already exists
+            const existing = document.getElementById(`conv-${convId}`);
+            if (existing) {
+                existing.click();
+                return;
+            }
+
+            const li = document.createElement("li");
+            li.className = "conv-item";
+            li.id = `conv-${convId}`;
+            li.innerText = displayEmail;
+            
+            li.addEventListener("click", () => {
+                document.querySelectorAll(".conv-item").forEach(el => el.classList.remove("active"));
+                li.classList.add("active");
+
+                activeConversationId = convId;
+                activeReceiverId = receiverId;
+
+                currentChatHeader.innerText = `Chatting with ${displayEmail}`;
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messagesList.innerHTML = ""; 
+
+                socket.emit("join:conversation", { conversationId: convId });
+                console.log(`Joined room: ${convId}`);
+            });
+
+            conversationsList.prepend(li);
+            li.click(); // Auto-select the newly created chat
+        }
+
+        // ==========================================
+        // 5. SENDING MESSAGES (SOCKET.IO)
+        // ==========================================
         sendBtn.addEventListener("click", () => {
-            // Ensure socket exists and is connected before sending
-            if (!socket || !socket.connected) return;
+            if (!activeConversationId || !socket.connected) return;
 
             const text = messageInput.value.trim();
-            
             if (text) {
-                socket.emit("event:message", { message: text });
-                console.log(`Sent to server: ${text}`);
+                socket.emit("send:direct_message", {
+                    conversationId: activeConversationId,
+                    receiverId: activeReceiverId,
+                    messageText: text
+                });
+
+                appendMessageToUI(text, "self");
                 messageInput.value = ""; 
             }
         });
 
         messageInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                sendBtn.click();
-            }
+            if (e.key === "Enter") sendBtn.click();
         });
+
+        // ==========================================
+        // Helper Functions
+        // ==========================================
+        function appendMessageToUI(text, senderType) {
+            const li = document.createElement("li");
+            li.className = `msg-item ${senderType}`;
+            li.innerText = text;
+            messagesList.appendChild(li);
+            messagesList.scrollTop = messagesList.scrollHeight;
+        }
+
+        function showError(msg) {
+            authError.innerText = msg;
+            authError.style.display = "block";
+        }
     </script>
 </body>
 </html>
