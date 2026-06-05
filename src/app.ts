@@ -3,6 +3,7 @@ import cors from "cors"
 import type { Express, Request, Response } from "express"
 import { authRouter } from "./routes/auth.routes.js"
 import { userRouter } from "./routes/user.routes.js"
+import { convRouter } from "./routes/conv.routes.js"
 
 export const app:Express = express()
 
@@ -22,3 +23,4 @@ app.use(cors(corsOptions))
 
 app.use("/api/v1/auth",authRouter)
 app.use("/api/v1/user",userRouter)
+app.use("/api/v1/conversations",convRouter)

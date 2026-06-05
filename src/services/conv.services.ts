@@ -5,7 +5,46 @@ enum convType {
     GROUP = "GROUP"
 }
 
-export const startConv = async (to:string, from:string, type:convType)=>{
+export const findDirectConv = async (user1:string, user2:string)=>{
+    const data = await prisma.conversation.findMany({
+        where:{
+            type:"DIRECT",
+            AND:[
+                {
+                    participants:{
+                        some:{ userId:user1 }
+                    }
+                },
+                {
+                    participants:{
+                        some:{ userId: user2}
+                    }
+                }
+            ]
+        },
+
+        include:{
+            messages:{
+                select:{
+                    id: true,
+                    content: true,
+                    sentAt: true,
+                    sender:{
+                        select:{
+                            id: true,
+                            fullname: true,
+                            email: true
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+    return data
+}
+
+export const startConv = async (receiverId:string, from:string, type:convType)=>{
     const createConv = await prisma.conversation.create({
         data:{
             type: type,
@@ -21,7 +60,7 @@ export const startConv = async (to:string, from:string, type:convType)=>{
             participants:{
                 create:[
                     {
-                        userId:to,
+                        userId:receiverId,
                     },
                     {
                         userId:from
@@ -35,12 +74,31 @@ export const startConv = async (to:string, from:string, type:convType)=>{
     return createConv.id as string
 }
 
-export const getConvs = async (userId:string)=>{
-    const convs = await prisma.conversation.findMany({
+export const getAllConvs = async (userId:string)=>{
+    const data = await prisma.conversation.findMany({
         where:{
             participants:{
-                
+                some:{ userId: userId }
+            }
+        },
+        
+        include:{
+            messages:{
+                select:{
+                    id: true,
+                    content: true,
+                    sentAt: true,
+                    sender:{
+                        select:{
+                            id: true,
+                            fullname: true,
+                            email: true
+                        }
+                    }
+                }
             }
         }
     })
+
+    return data
 }

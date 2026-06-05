@@ -1,6 +1,12 @@
 import { Server } from "socket.io";
-import { publishMessage, sendMessages, subscribeMessage } from "../services/message.services.js"
+import { publishMessage, sendMessages, subscribeMessage } from "./pub-sub.services.js"
 import { setupSocketAuth } from "../services/auth.services.js"
+
+export interface IMsgPayload {
+    messageText: string
+    receiverId: string
+    convId: string
+}
 
 export class SocketService{
     private _io:Server
@@ -15,15 +21,25 @@ export class SocketService{
 
     public async initListeners() {
         const io = this._io
+
         io.on("connect", (socket)=>{
-            console.log(`new socket connected: ${socket.id}`)
+            const user = socket.data.user?.email
+            console.log(`new socket connected: ${socket.id}, email:${user}`)
 
-            socket.on("event:message", async ({message}:{message:string})=>{
-                console.log(`New message recieved: ${message}`)
+            const userId = socket.data.user.id
+            socket.join(userId)
 
-                await publishMessage(message)
+            socket.on("join:conversation", async (data)=>{
+                socket.join(data?.conversationId)
+                console.log(`User ${user} joined in room: ${data?.conversationId}`)
+            })
 
-                await sendMessages(io, "MESSAGES", message)
+            socket.on("event:direct_message", async (payload:IMsgPayload)=>{
+                const { messageText } = payload
+                console.log(`New message recieved: ${messageText}`)
+
+                await publishMessage(payload)
+                await sendMessages(io, socket, "MESSAGES", payload)
             })
         })
     }

@@ -5,6 +5,7 @@ import { hash, compare } from "bcrypt"
 interface IJWTPayload {
     id:string
     email:string
+    fullname:string
 }
 
 export const verifyJWT = (token:string)=>{

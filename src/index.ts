@@ -33,29 +33,6 @@ async function init() {
 }
 
 init()
-
-
-
-
-
-
-
-
-
-
-// connectDB().then(()=>{
-//     app.on("error" as "mount",(err)=>{
-//         console.log(err)
-//         throw err
-//     })
-
-//     app.listen(port,()=>{
-//         console.log(`Server is listening on port ${port}`)
-//     })
-// }).catch((err)=>{
-//     console.log(`Error for connectDB execution, Error:${err}`)
-// })
-
 app.get('/',(req,res)=>{
-    res.send(`Backend is running`)
+    res.send(`Server is up & running`)
 })

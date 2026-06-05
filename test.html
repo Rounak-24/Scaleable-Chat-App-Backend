@@ -191,8 +191,8 @@
                 console.log(data)
                 // Render the user with a Start Chat button
                 // (Assumes backend returns an object like { id: "123", email: "bob@test.com" })
-                const userId = data.id || data._id || data.receiver_id; // Adapt to your DB structure
-                const userEmail = data.email || email;
+                const userId = data.data.id || data._id || data.receiver_id; // Adapt to your DB structure
+                const userEmail = data.data.email || email;
                 const username = data.data.fullname
 
                 searchResults.innerHTML = `
@@ -225,20 +225,25 @@
 
             try {
                 // Make API call to CREATE the conversation
-                const response = await fetch("http://localhost:3000/api/v1/conversations", {
+                const response = await fetch("http://localhost:3000/api/v1/conversations/init", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${jwtToken}`
                     },
-                    body: JSON.stringify({ receiverId: receiverId })
+                    body: JSON.stringify({ 
+                        receiverId: receiverId,
+                        convType: "DIRECT"
+                    })
                 });
 
                 const data = await response.json();
+                console.log(data)
                 if (!response.ok) throw new Error(data.error || "Failed to start chat");
 
                 // Add to sidebar and clear search area
-                addConversationToSidebar(data.conversation_id, receiverEmail, receiverId);
+                const conversation_id = data.data?.convId
+                addConversationToSidebar(conversation_id, receiverEmail, receiverId);
                 searchResults.innerHTML = "";
                 searchEmail.value = "";
 
@@ -253,6 +258,7 @@
         // 4. UI: SIDEBAR & ROOM JOINING
         // ==========================================
         function addConversationToSidebar(convId, displayEmail, receiverId) {
+            console.log(convId)
             // Prevent adding duplicate rooms in the UI if it already exists
             const existing = document.getElementById(`conv-${convId}`);
             if (existing) {
@@ -293,7 +299,7 @@
 
             const text = messageInput.value.trim();
             if (text) {
-                socket.emit("send:direct_message", {
+                socket.emit("event:direct_message", {
                     conversationId: activeConversationId,
                     receiverId: activeReceiverId,
                     messageText: text
