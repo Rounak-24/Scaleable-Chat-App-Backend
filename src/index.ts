@@ -1,6 +1,7 @@
 import { app, corsOptions } from "./app.js"
 import { createServer } from "http"
 import { SocketService } from "./services/socket.js"
+import { startMessageConsumer } from "./services/kafka.services.js"
 import dotenv from "dotenv"
 dotenv.config()
 
@@ -24,6 +25,7 @@ async function init() {
             console.log(`Server is listening on port ${port}`)
         })
 
+        startMessageConsumer()
         socketService.initListeners()
 
     }catch(err){

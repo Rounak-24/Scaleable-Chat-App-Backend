@@ -302,7 +302,8 @@
                 socket.emit("event:direct_message", {
                     conversationId: activeConversationId,
                     receiverId: activeReceiverId,
-                    messageText: text
+                    messageText: text,
+                    senderId: null
                 });
 
                 appendMessageToUI(text, "self");

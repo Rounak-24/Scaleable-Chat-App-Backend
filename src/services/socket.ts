@@ -5,7 +5,8 @@ import { setupSocketAuth } from "../services/auth.services.js"
 export interface IMsgPayload {
     messageText: string
     receiverId: string
-    convId: string
+    senderId: string
+    conversationId: string
 }
 
 export class SocketService{
@@ -38,6 +39,7 @@ export class SocketService{
                 const { messageText } = payload
                 console.log(`New message recieved: ${messageText}`)
 
+                payload.senderId = userId
                 await publishMessage(payload)
                 await sendMessages(io, socket, "MESSAGES", payload)
             })
