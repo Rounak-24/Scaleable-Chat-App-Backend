@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { publishMessage, sendMessages, subscribeMessage } from "./pub-sub.services.js"
+import { publishMessage, initRedisSubscriber } from "./pub-sub.services.js"
 import { setupSocketAuth } from "../services/auth.services.js"
 
 export interface IMsgPayload {
@@ -17,7 +17,7 @@ export class SocketService{
         this._io = new Server()
 
         setupSocketAuth(this._io)
-        subscribeMessage()
+        initRedisSubscriber(this._io)
     }
 
     public async initListeners() {
@@ -37,11 +37,10 @@ export class SocketService{
 
             socket.on("event:direct_message", async (payload:IMsgPayload)=>{
                 const { messageText } = payload
-                console.log(`New message recieved: ${messageText}`)
+                console.log(`New message recieved in socketService: ${messageText}`)
 
                 payload.senderId = userId
                 await publishMessage(payload)
-                await sendMessages(io, socket, "MESSAGES", payload)
             })
         })
     }

@@ -75,6 +75,7 @@ export const startConv = async (receiverId:string, from:string, type:convType)=>
 }
 
 export const getAllConvs = async (userId:string)=>{
+    // console.log(userId, typeof(userId))
     const data = await prisma.conversation.findMany({
         where:{
             participants:{
@@ -83,7 +84,34 @@ export const getAllConvs = async (userId:string)=>{
         },
         
         include:{
+            participants:{
+                where:{
+                    userId:{ not: userId }
+                },
+                select:{
+                    user:{
+                        select:{
+                            id: true,
+                            fullname: true,
+                            email: true
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+    return data
+}
+
+export const getConvMsgs = async (conversationId:string)=>{
+    const data = await prisma.conversation.findMany({
+        where: {id: conversationId},
+        include:{
             messages:{
+                orderBy:{
+                    sentAt: "desc"
+                },
                 select:{
                     id: true,
                     content: true,

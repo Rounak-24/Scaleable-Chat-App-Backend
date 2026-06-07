@@ -24,7 +24,7 @@ async function init() {
         httpServer.listen(port,()=>{
             console.log(`Server is listening on port ${port}`)
         })
-
+          
         startMessageConsumer()
         socketService.initListeners()
 

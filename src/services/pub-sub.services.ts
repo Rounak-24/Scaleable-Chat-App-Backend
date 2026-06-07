@@ -1,50 +1,49 @@
-import { type Socket, type Server } from "socket.io"
+import { type Server } from "socket.io"
 import { pub,sub } from "../config/redis.js"
 import type { IMsgPayload } from "./socket.js"
 import { produceMessage } from "./kafka.services.js"
 
 export const publishMessage = async (payload:IMsgPayload)=>{
     try{
-        await pub.publish("MESSAGES",JSON.stringify({
-            payload:payload
-        }))
+        await pub.publish("MESSAGES",JSON.stringify(payload))
 
-        console.log(`Message-data published to Redis, data:${payload}, Time: ${new Date(Date.now())}`)
+        console.log(`Message-data published to Redis, data:${JSON.stringify(payload)}, Time: ${new Date(Date.now())}`)
 
     }catch(err){
         console.log(`Error occured for publishing messages to Redis`,err)
     }
 }
 
-export const subscribeMessage = async ()=>{
+
+export const initRedisSubscriber = async (io:Server)=>{
     try{
         await sub.subscribe("MESSAGES")
+        console.log("✅ Subscribed to Redis MESSAGES channel")
 
-        // console.log("message subscribed")
-    }catch(err){
-        console.log(`Error occured for subscribing messages to Redis`,err)
-    }
-}
+        sub.on("message",async (channel:string, message:string)=>{
+            const msgPayload:IMsgPayload = JSON.parse(message)
+            const {messageText, conversationId, senderId } = msgPayload
+            console.log("message recieved in redisSubscriber",msgPayload)
 
-export const sendMessages = async (io:Server, socket:Socket, channel:string, payload:IMsgPayload)=>{
-    try{
-        const {messageText, receiverId, conversationId} = payload
-        const { id } = socket.data.user?.id
-
-        sub.on("message",async ()=>{
             switch(channel){
                 case "MESSAGES":
-                    io.to(receiverId).emit("receive:message", {messageText, conversationId})
-                    socket.to(id).emit("receive:message", {messageText, conversationId})
+                    io.to(conversationId).emit("receive:message", {
+                        messageText, 
+                        conversationId,
+                        senderId: senderId
+                    })
+                    // socket.to(id).emit("receive:message", {
+                    //     messageText, 
+                    //     conversationId,
+                    //     senderId: id
+                    // })
 
-                    await produceMessage(payload)
+                    await produceMessage(msgPayload)
+                    console.log("message sent from redis subscriber")
             }
         })
 
-        console.log("message sent")
-
     }catch(err){
-        console.log(`Error occured for sending messages to client`,err)
+        console.log(`Error occured in initRedisSubscriber`,err)
     }
 }
-

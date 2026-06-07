@@ -1,12 +1,12 @@
 import { asyncHandler } from "../utils/asyncHandler"
 import { type Request, type Response } from "express"
-import { startConv, findDirectConv, getAllConvs } from "../services/conv.services.js"
+import { startConv, findDirectConv, getAllConvs, getConvMsgs } from "../services/conv.services.js"
 import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 
 
 export const startConvHandler = asyncHandler(async (req:Request, res:Response)=>{
-    const {convType, receiverId } = req.body
+    const { convType, receiverId } = req.body
     const currentUserId = req.user.id
     if(!convType || !receiverId) throw new ApiError(400,"convType and user_id is required")
 
@@ -29,12 +29,24 @@ export const startConvHandler = asyncHandler(async (req:Request, res:Response)=>
 })
 
 export const getAllConvsHandler = asyncHandler(async (req:Request, res:Response)=>{
-    const {id} = req.user?.id
-
+    const {id} = req.user
+    
     const getConvs = await getAllConvs(id)
     if(!getConvs) return res.status(200).json({message:"no conversation found"})
     
     return res.status(200).json(
         new ApiResponse(200,getConvs,"fetched all conversationss successfully")
+    )
+})
+
+export const getConvMsgHandler = asyncHandler(async (req:Request, res:Response)=>{
+    const conversationId = req.params.conversationId as string
+    if(!conversationId) throw new ApiError(400,"conversationId is required")
+
+    const msgs = await getConvMsgs(conversationId)
+    if(!msgs) throw new ApiError(404,"messages not found")
+
+    return res.status(200).json(
+        new ApiResponse(200,msgs,"messages fetched successfully")
     )
 })

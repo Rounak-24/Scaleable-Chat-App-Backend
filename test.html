@@ -6,58 +6,96 @@
     <title>Secure Socket.IO Chat App</title>
     <script src="http://localhost:3000/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; margin: 0; }
+        body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; margin: 0; }
         
         /* Auth Section */
-        #auth-container { margin-bottom: 20px; padding: 15px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 6px; display: inline-block; }
+        #auth-container { margin-bottom: 20px; padding: 15px; background: #ffffff; border: 1px solid #ddd; border-radius: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         #tokenInput { width: 300px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
         .error-text { color: red; font-weight: bold; margin-top: 10px; display: none; }
-        button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; transition: background 0.2s; }
+        button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; transition: background 0.2s; font-weight: bold;}
         button:hover { background-color: #0056b3; }
         button:disabled { background-color: #cccccc; cursor: not-allowed; }
 
-        /* Main App Layout (Hidden until connected) */
+        /* Main App Layout */
         #app-layout { 
             display: none; 
-            gap: 20px; 
+            gap: 0; 
             margin-top: 20px; 
             background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            height: 600px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         #app-layout.active { display: flex; }
 
         /* Sidebar (Left) */
-        .sidebar { width: 300px; border-right: 1px solid #e0e0e0; padding: 15px; display: flex; flex-direction: column; }
-        .sidebar h3 { margin-top: 0; font-size: 16px; margin-bottom: 10px; }
+        .sidebar { width: 300px; border-right: 1px solid #ddd; padding: 20px; display: flex; flex-direction: column; background-color: #ffffff; }
+        .sidebar h3 { margin-top: 0; font-size: 16px; margin-bottom: 15px; color: #333; }
         
-        /* Search Area */
         .search-group { display: flex; gap: 5px; margin-bottom: 10px; }
-        #searchEmail { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        #searchBtn { padding: 8px 12px; }
+        #searchEmail { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        #searchBtn { padding: 10px 15px; border-radius: 6px; }
         
         #searchResults { margin-bottom: 20px; min-height: 40px; }
-        .search-result-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #e9ecef; border-radius: 4px; font-size: 14px; }
-        .search-result-item button { padding: 5px 10px; font-size: 12px; background-color: #28a745; }
+        .search-result-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background-color: #f8f9fa; border-radius: 6px; font-size: 14px; border: 1px solid #eee; }
+        .search-result-item button { padding: 6px 12px; font-size: 12px; background-color: #28a745; }
         .search-result-item button:hover { background-color: #218838; }
 
         /* Conversations List */
         #conversationsList { list-style-type: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
-        .conv-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; border-radius: 4px; }
-        .conv-item:hover { background-color: #f1f8ff; }
-        .conv-item.active { background-color: #e3f2fd; font-weight: bold; border-left: 4px solid #007bff; }
+        .conv-item { padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; border-radius: 8px; margin-bottom: 4px; transition: background 0.2s;}
+        .conv-item:hover { background-color: #f5f6f8; }
+        .conv-item.active { background-color: #e6f2ff; font-weight: bold; border-left: 4px solid #007bff; border-radius: 4px; }
 
         /* Chat Area (Right) */
-        .chat-area { flex-grow: 1; display: flex; flex-direction: column; padding: 15px; }
-        #currentChatHeader { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #555; }
+        .chat-area { flex-grow: 1; display: flex; flex-direction: column; background-color: #efeae2; }
+        #currentChatHeader { margin: 0; padding: 20px; background: #ffffff; border-bottom: 1px solid #ddd; color: #333; font-size: 18px; }
         
-        #messagesList { list-style-type: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg-item { padding: 8px 12px; background-color: #e9ecef; border-radius: 12px; width: fit-content; max-width: 80%; word-break: break-all; }
-        .msg-item.self { background-color: #007bff; color: white; align-self: flex-end; }
+        /* THE CHAT BUBBLES CSS */
+        #messagesList { 
+            list-style-type: none; 
+            padding: 20px; 
+            margin: 0; 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px;
+        }
+        
+        /* Base Bubble */
+        .msg-item { 
+            padding: 10px 14px; 
+            background-color: #ffffff; 
+            border-radius: 16px; 
+            border-bottom-left-radius: 4px;
+            width: fit-content; 
+            max-width: 70%; 
+            word-break: break-word;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            align-self: flex-start;
+            color: #333;
+            font-size: 15px;
+            line-height: 1.4;
+        }
 
-        .chat-controls { display: flex; gap: 10px; }
-        #messageInput { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        /* Your Bubble */
+        .msg-item.self { 
+            background-color: #007bff;
+            color: white; 
+            align-self: flex-end;
+            border-radius: 16px;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* Input Area */
+        .chat-controls { display: flex; gap: 10px; padding: 20px; background: #f0f2f5; border-top: 1px solid #ddd; }
+        #messageInput { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 24px; font-size: 15px; outline: none; }
+        #messageInput:focus { border-color: #007bff; }
+        #sendBtn { border-radius: 24px; padding: 10px 20px; }
     </style>
 </head>
 <body>
@@ -72,14 +110,12 @@
     </div>
 
     <div id="app-layout">
-        
         <div class="sidebar">
             <h3>Start New Chat</h3>
             <div class="search-group">
                 <input type="email" id="searchEmail" placeholder="User's email (e.g., bob@test.com)">
                 <button id="searchBtn">Search</button>
             </div>
-            
             <div id="searchResults"></div>
 
             <h3>Your Conversations</h3>
@@ -101,8 +137,13 @@
         let activeConversationId = null;
         let activeReceiverId = null; 
         let jwtToken = ""; 
+        let myUserId = null;
+        let historyLoadGeneration = 0;
+        let historyFetchInFlight = null;
+        const conversationsMeta = new Map();
+        const messageStore = new Map();
+        const renderedMessageIds = new Set();
 
-        // DOM Elements
         const tokenInput = document.getElementById("tokenInput");
         const connectBtn = document.getElementById("connectBtn");
         const authError = document.getElementById("authError");
@@ -119,12 +160,26 @@
         const messageInput = document.getElementById("messageInput");
         const sendBtn = document.getElementById("sendBtn");
 
-        // ==========================================
-        // 1. AUTH & CONNECTION
-        // ==========================================
+        function decodeJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                return null;
+            }
+        }
+
         connectBtn.addEventListener("click", () => {
+            connectBtn.disabled = true
             jwtToken = tokenInput.value.trim();
             if (!jwtToken) return showError("Please enter a token first!");
+
+            const decodedToken = decodeJwt(jwtToken);
+            myUserId = decodedToken
+                ? normalizeId(decodedToken.id || decodedToken.userId || decodedToken.sub || decodedToken._id)
+                : null;
 
             authError.style.display = "none";
             statusDiv.innerText = "Status: 🟡 Connecting...";
@@ -136,12 +191,158 @@
             });
 
             setupSocketListeners();
+
+            setTimeout(()=>{
+                connectBtn.disabled = false,
+                connectBtn.innerText = "connect"
+            }, 1000*2)
         });
 
+        function normalizeId(value) {
+            return value == null ? "" : String(value);
+        }
+
+        function getMessageText(data) {
+            return data.messageText || data.content || data.text || "";
+        }
+
+        function getSenderType(data) {
+            const senderId = normalizeId(data.senderId || data.sender_id || data.sender?.id);
+            if (!senderId) return "other";
+            return senderId === normalizeId(myUserId) ? "self" : "other";
+        }
+
+        function getConversationId(data) {
+            return normalizeId(data.conversationId || data.conversation_id);
+        }
+
+        function getStoredMessages(convId) {
+            const key = normalizeId(convId);
+            if (!messageStore.has(key)) {
+                messageStore.set(key, []);
+            }
+            return messageStore.get(key);
+        }
+
+        function messageAlreadyStored(convId, id) {
+            if (!id) return false;
+            return getStoredMessages(convId).some((msg) => msg.id === id);
+        }
+
+        function isContentAlreadyInStore(convId, text, senderType) {
+            const store = getStoredMessages(convId);
+            if (store.some((msg) => msg.text === text && msg.senderType === senderType)) {
+                return true;
+            }
+            if (senderType === "other" && store.some((msg) => msg.text === text && msg.senderType === "self")) {
+                return true;
+            }
+            return false;
+        }
+
+        function getSortedMessages(convId) {
+            return [...getStoredMessages(convId)].sort((a, b) => {
+                const timeA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+                const timeB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+                return timeA - timeB;
+            });
+        }
+
+        function removeMatchingTempMessage(convId, text, senderType) {
+            const store = getStoredMessages(convId);
+            const tempIndex = store.findIndex(
+                (msg) =>
+                    String(msg.id).startsWith("temp-") &&
+                    msg.text === text &&
+                    msg.senderType === senderType
+            );
+            if (tempIndex >= 0) store.splice(tempIndex, 1);
+        }
+
+        function addMessageToStore(convId, text, senderType, id = null, options = {}) {
+            const normalizedConvId = normalizeId(convId);
+            if (!text) return false;
+
+            if (messageAlreadyStored(normalizedConvId, id)) {
+                return false;
+            }
+
+            if (options.fromSocket && isContentAlreadyInStore(normalizedConvId, text, senderType)) {
+                return false;
+            }
+
+            if (id && !String(id).startsWith("temp-")) {
+                removeMatchingTempMessage(normalizedConvId, text, senderType);
+            }
+
+            const messageId = id || `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            getStoredMessages(normalizedConvId).push({
+                id: messageId,
+                text,
+                senderType,
+                sentAt: options.sentAt || new Date().toISOString()
+            });
+            return true;
+        }
+
+        function appendChatMessage(convId, text, senderType, id = null, options = {}) {
+            if (!addMessageToStore(convId, text, senderType, id, options)) return false;
+
+            if (normalizeId(convId) !== normalizeId(activeConversationId)) return true;
+
+            renderConversationMessages(convId);
+            return true;
+        }
+
+        function joinConversationRoom(convId) {
+            if (!socket?.connected || !convId) return;
+            socket.emit("join:conversation", { conversationId: normalizeId(convId) });
+        }
+
+        function renderConversationMessages(convId) {
+            const normalizedConvId = normalizeId(convId);
+            if (normalizedConvId !== normalizeId(activeConversationId)) return;
+
+            messagesList.innerHTML = "";
+            renderedMessageIds.clear();
+
+            getSortedMessages(normalizedConvId).forEach((msg) => {
+                appendMessageToUI(msg.text, msg.senderType, msg.id);
+            });
+        }
+
+        function handleIncomingSocketMessage(data) {
+            const convId = getConversationId(data);
+            const text = getMessageText(data);
+            if (!convId || !text) return;
+
+            const messageId = data.id || data.messageId || null;
+            const senderType = getSenderType(data);
+
+            if (senderType === "self") return;
+            if (isContentAlreadyInStore(convId, text, senderType)) return;
+
+            console.log("Socket message received:", data);
+
+            appendChatMessage(convId, text, senderType, messageId, {
+                fromSocket: true,
+                sentAt: new Date().toISOString()
+            });
+        }
+
         function setupSocketListeners() {
+            socket.off("connect");
+            socket.off("connect_error");
+            socket.off("disconnect");
+            socket.off("receive:message");
+
             socket.on("connect", () => {
-                statusDiv.innerText = `Status: 🟢 Connected securely (ID: ${socket.id})`;
-                appLayout.classList.add("active"); 
+                const decodedToken = decodeJwt(jwtToken);
+                const email = decodedToken?.email || "unknown";
+                statusDiv.innerText = `Status: 🟢 Connected securely (ID: ${socket.id}), User: ${email}`;
+                appLayout.classList.add("active");
+
+                fetchExistingConversations();
             });
 
             socket.on("connect_error", (err) => {
@@ -155,17 +356,128 @@
                 appLayout.classList.remove("active");
             });
 
-            socket.on("receive:message", (data) => {
-                console.log("New message received:", data);
-                if (data.conversation_id === activeConversationId) {
-                    appendMessageToUI(data.content, "other");
-                }
-            });
+            socket.on("receive:message", handleIncomingSocketMessage);
         }
 
-        // ==========================================
-        // 2. SEARCH FOR USER
-        // ==========================================
+        async function fetchExistingConversations() {
+            try {
+                const res = await fetch("http://localhost:3000/api/v1/conversations/get", {
+                    method: "GET",
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error("Failed to load conversations");
+                
+                const convs = data.data || [];
+                conversationsList.innerHTML = ""; 
+
+                convs.forEach(conv => {
+                    const convId = conv.id || conv._id || conv.convId;
+                    const receiverId = conv.participants?.[0]?.user?.id || conv.receiverId || null;
+                    const participant = conv.participants?.[0]?.user?.fullname;
+                    const displayName = conv.name || participant || "Conversation";
+
+                    conversationsMeta.set(normalizeId(convId), {
+                        receiverId: normalizeId(receiverId),
+                        displayName
+                    });
+
+                    addConversationToSidebar(convId, displayName, normalizeId(receiverId), false);
+                });
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchMessageHistory(convId) {
+            const normalizedConvId = normalizeId(convId);
+            if (!normalizedConvId) return;
+
+            if (historyFetchInFlight === normalizedConvId) return;
+
+            const loadId = ++historyLoadGeneration;
+            historyFetchInFlight = normalizedConvId;
+
+            try {
+                messagesList.innerHTML = `<li style="text-align: center; color: #888;">Loading messages...</li>`;
+
+                const res = await fetch(`http://localhost:3000/api/v1/conversations/messages/${normalizedConvId}`, {
+                    method: "GET",
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error("Failed to load history");
+                if (loadId !== historyLoadGeneration) return;
+                if (normalizedConvId !== normalizeId(activeConversationId)) return;
+
+                // 1. Keep track of pending unconfirmed temporary messages
+                const pendingTemps = getStoredMessages(normalizedConvId).filter((msg) =>
+                    String(msg.id).startsWith("temp-")
+                );
+
+                // 2. Clear store to populate with fresh API history
+                messageStore.set(normalizedConvId, []);
+
+                const msgs = [...(data.data?.[0]?.messages || [])].sort((a, b) => {
+                    return new Date(a.sentAt || 0).getTime() - new Date(b.sentAt || 0).getTime();
+                });
+
+                // 3. Process the API history
+                msgs.forEach((msg) => {
+                    const text = msg.messageText || msg.content;
+                    if (!text) return;
+
+                    const senderId = msg.senderId || msg.sender_id || msg.sender?.id;
+                    const senderType = normalizeId(senderId) === normalizeId(myUserId) ? "self" : "other";
+
+                    addMessageToStore(normalizedConvId, text, senderType, msg.id, { sentAt: msg.sentAt });
+
+                    // Consume a matching pending temp message
+                    const matchIndex = pendingTemps.findIndex(t => t.text === text && t.senderType === senderType);
+                    if (matchIndex >= 0) pendingTemps.splice(matchIndex, 1);
+                });
+
+                // 4. Restore any remaining temporary messages not yet in API
+                const store = getStoredMessages(normalizedConvId);
+                pendingTemps.forEach(t => store.push(t));
+
+                renderConversationMessages(normalizedConvId);
+
+            } catch (err) {
+                if (loadId !== historyLoadGeneration) return;
+                messagesList.innerHTML = `<li style="text-align: center; color: red;">Error loading history</li>`;
+                console.error(err);
+            } finally {
+                if (historyFetchInFlight === normalizedConvId) {
+                    historyFetchInFlight = null;
+                }
+            }
+        }
+
+        function selectConversation(normalizedConvId, displayEmail, normalizedReceiverId) {
+            const isAlreadyActive = normalizedConvId === activeConversationId;
+
+            document.querySelectorAll(".conv-item").forEach((el) => el.classList.remove("active"));
+            const item = document.getElementById(`conv-${normalizedConvId}`);
+            if (item) item.classList.add("active");
+
+            activeConversationId = normalizedConvId;
+            activeReceiverId = normalizedReceiverId || conversationsMeta.get(normalizedConvId)?.receiverId || null;
+
+            currentChatHeader.innerText = `Chatting with ${displayEmail}`;
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+
+            joinConversationRoom(normalizedConvId);
+
+            if (!isAlreadyActive) {
+                fetchMessageHistory(normalizedConvId);
+            }
+        }
+
         searchBtn.addEventListener("click", async () => {
             const email = searchEmail.value.trim();
             if (!email) return alert("Please enter an email");
@@ -173,12 +485,10 @@
             try {
                 searchBtn.innerText = "...";
                 searchBtn.disabled = true;
-                searchResults.innerHTML = ""; // Clear previous results
+                searchResults.innerHTML = ""; 
 
-                // Make API call to FIND the user
-                // Adjust route to match your backend (GET or POST)
                 const response = await fetch(`http://localhost:3000/api/v1/user/search`, {
-                    method: "POST", // Change to GET if your search endpoint is GET
+                    method: "POST", 
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${jwtToken}`
@@ -188,12 +498,10 @@
 
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || "User not found");
-                console.log(data)
-                // Render the user with a Start Chat button
-                // (Assumes backend returns an object like { id: "123", email: "bob@test.com" })
-                const userId = data.data.id || data._id || data.receiver_id; // Adapt to your DB structure
+                
+                const userId = data.data.id || data._id || data.receiver_id; 
                 const userEmail = data.data.email || email;
-                const username = data.data.fullname
+                const username = data.data.fullname || userEmail;
 
                 searchResults.innerHTML = `
                     <div class="search-result-item">
@@ -202,9 +510,8 @@
                     </div>
                 `;
 
-                // Attach event listener to the new button
                 document.getElementById("initiateChatBtn").addEventListener("click", () => {
-                    initiateConversation(userId, userEmail);
+                    initiateConversation(userId, username); 
                 });
 
             } catch (err) {
@@ -215,16 +522,12 @@
             }
         });
 
-        // ==========================================
-        // 3. START CONVERSATION (Create & Join Room)
-        // ==========================================
         async function initiateConversation(receiverId, receiverEmail) {
             const btn = document.getElementById("initiateChatBtn");
             btn.innerText = "Starting...";
             btn.disabled = true;
 
             try {
-                // Make API call to CREATE the conversation
                 const response = await fetch("http://localhost:3000/api/v1/conversations/init", {
                     method: "POST",
                     headers: {
@@ -238,12 +541,17 @@
                 });
 
                 const data = await response.json();
-                console.log(data)
                 if (!response.ok) throw new Error(data.error || "Failed to start chat");
 
-                // Add to sidebar and clear search area
-                const conversation_id = data.data?.convId
-                addConversationToSidebar(conversation_id, receiverEmail, receiverId);
+                const conversation_id = data.data?.convId || data.data?.existedConv?.id;
+                conversationsMeta.set(normalizeId(conversation_id), {
+                    receiverId: normalizeId(receiverId),
+                    displayName: receiverEmail
+                });
+
+                // autoClick=true only for newly initiated chats — intentional UX.
+                addConversationToSidebar(conversation_id, receiverEmail, normalizeId(receiverId), true);
+                
                 searchResults.innerHTML = "";
                 searchEmail.value = "";
 
@@ -254,73 +562,75 @@
             }
         }
 
-        // ==========================================
-        // 4. UI: SIDEBAR & ROOM JOINING
-        // ==========================================
-        function addConversationToSidebar(convId, displayEmail, receiverId) {
-            console.log(convId)
-            // Prevent adding duplicate rooms in the UI if it already exists
-            const existing = document.getElementById(`conv-${convId}`);
+        function addConversationToSidebar(convId, displayEmail, receiverId, autoClick = false) {
+            const normalizedConvId = normalizeId(convId);
+            const normalizedReceiverId = normalizeId(
+                receiverId || conversationsMeta.get(normalizedConvId)?.receiverId || null
+            ) || null;
+
+            conversationsMeta.set(normalizedConvId, {
+                receiverId: normalizedReceiverId,
+                displayName: displayEmail
+            });
+
+            const existing = document.getElementById(`conv-${normalizedConvId}`);
             if (existing) {
-                existing.click();
+                if (autoClick) selectConversation(normalizedConvId, displayEmail, normalizedReceiverId);
                 return;
             }
 
             const li = document.createElement("li");
             li.className = "conv-item";
-            li.id = `conv-${convId}`;
+            li.id = `conv-${normalizedConvId}`;
             li.innerText = displayEmail;
             
             li.addEventListener("click", () => {
-                document.querySelectorAll(".conv-item").forEach(el => el.classList.remove("active"));
-                li.classList.add("active");
-
-                activeConversationId = convId;
-                activeReceiverId = receiverId;
-
-                currentChatHeader.innerText = `Chatting with ${displayEmail}`;
-                messageInput.disabled = false;
-                sendBtn.disabled = false;
-                messagesList.innerHTML = ""; 
-
-                socket.emit("join:conversation", { conversationId: convId });
-                console.log(`Joined room: ${convId}`);
+                selectConversation(normalizedConvId, displayEmail, normalizedReceiverId);
             });
 
             conversationsList.prepend(li);
-            li.click(); // Auto-select the newly created chat
+            if (autoClick) selectConversation(normalizedConvId, displayEmail, normalizedReceiverId);
         }
 
-        // ==========================================
-        // 5. SENDING MESSAGES (SOCKET.IO)
-        // ==========================================
         sendBtn.addEventListener("click", () => {
-            if (!activeConversationId || !socket.connected) return;
+            if (!activeConversationId || !socket?.connected) return;
 
             const text = messageInput.value.trim();
-            if (text) {
-                socket.emit("event:direct_message", {
-                    conversationId: activeConversationId,
-                    receiverId: activeReceiverId,
-                    messageText: text,
-                    senderId: null
-                });
+            if (!text) return;
 
-                appendMessageToUI(text, "self");
-                messageInput.value = ""; 
+            const meta = conversationsMeta.get(normalizeId(activeConversationId));
+            const receiverId = normalizeId(activeReceiverId || meta?.receiverId);
+            if (!receiverId) {
+                alert("Cannot send: receiver not found for this conversation.");
+                return;
             }
+
+            const payload = {
+                conversationId: normalizeId(activeConversationId),
+                receiverId,
+                messageText: text,
+                senderId: myUserId
+            };
+
+            socket.emit("event:direct_message", payload);
+            appendChatMessage(activeConversationId, text, "self", null, {
+                sentAt: new Date().toISOString()
+            });
+            messageInput.value = "";
         });
 
         messageInput.addEventListener("keypress", (e) => {
             if (e.key === "Enter") sendBtn.click();
         });
 
-        // ==========================================
-        // Helper Functions
-        // ==========================================
-        function appendMessageToUI(text, senderType) {
+        function appendMessageToUI(text, senderType, messageId = null) {
+            if (messageId && renderedMessageIds.has(messageId)) return;
+            if (messageId) renderedMessageIds.add(messageId);
+
             const li = document.createElement("li");
             li.className = `msg-item ${senderType}`;
+            li.dataset.text = text;
+            if (messageId) li.dataset.messageId = messageId;
             li.innerText = text;
             messagesList.appendChild(li);
             messagesList.scrollTop = messagesList.scrollHeight;
